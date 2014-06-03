@@ -1,4 +1,5 @@
 * Create dates from failure times
+
 	* Import Cdiff time-varying (long) data
 	cd /Users/nicole/FHCRC/cdiff/doFiles
 	do control_2007.do
@@ -12,10 +13,8 @@
 	tsfill
 	
 	*Carryforward uwids
-	gsort upn -uwid, gen(rev_uwid)
-	bysort upn (rev_uwid): replace uwid = uwid[1] if uwid==""
+	bysort upn (uwid): carryforward uwid, replace
 	bysort upn (uwid): assert uwid[1]==uwid
-	drop rev_uwid
 	
 	* Save dataset for merge with in/out data
 	cd ../data-dta
@@ -78,51 +77,63 @@
 
 	* Create full in/out timelines using all known dates
 		
-		* Create new date var for all in/out dates, indicate
+		* Clean up entries
 			
-			* Clean up entries
-				
-				* Drop duplicate entries
-				duplicates drop uwid date_checkIn date_checkOu inOuPat, force
-				
-				* Edit outpatient data to reflect days
-				replace date_checkOu = date_checkIn if inlist(days, 1, 0) & inOuPat==1
-				ge sameDay = 1 if date_checkIn == date_checkOu
-
-				* Drop new duplicate entries
-				duplicates report uwid date_checkIn date_checkOu inOuPat if inOuPat==1 // all dups from outpatient visits
-				duplicates drop uwid date_checkIn date_checkOu inOuPat, force
-
-			* New obs (1 obs for checkin, 1 obs for checkout)
-			expand 2, gen(checkInOu) // 0 == original obs (check-in), 1 == new obs (check-out)
-			ge date_failtime = cond(checkInOu == 0, date_checkIn, date_checkOu)
+			* Drop duplicate entries
+			duplicates drop uwid date_checkIn date_checkOu inOuPat, force
 			
-			* Drop "check-out" obs for same day obs
-			drop if sameDay==1 & checkInOu == 1
+			* Edit outpatient data to reflect days
+			replace date_checkOu = date_checkIn if inlist(days, 1, 0) & inOuPat==1
+			ge sameDay = 1 if date_checkIn == date_checkOu
 
-		* Create temp panels per in/outpatient exposures
+			* Drop new duplicate entries
+			duplicates report uwid date_checkIn date_checkOu inOuPat if inOuPat==1 // all dups from outpatient visits
+			duplicates drop uwid date_checkIn date_checkOu inOuPat, force				
+
+			* It appears that multiday OP visits are more accurately represented by OP visits of days 0/1
+			* Multiday OP visits overestimate the duration of OP visits & overlap IP visits
+			drop if inOuPat==1 & days>1
+			drop date_checkOuAssum //no longer needed
+			
+			* Now, drop if outpatient visit occured on day of inpatient admittance
+			duplicates tag uwid date_checkIn, gen(dup)
+			drop if inOuPat==1 & dup>0
+			
+			* Drop the few redundant IP listings of days==1
+			drop if dup>0 & inOuPat==2 & days==1
+			drop dup //no longer needed
 		
-			* Temp panel ID
-			egen temp_panID = group(uwid date_checkIn date_checkOu)
-			
-			* Drop if outpatient visit occurred during inpatient admittance
-			duplicates tag temp_panID date_failtime, gen(dup)
-			drop if dup==1 & inOuPat==1
-			
-			* Fill in dates for each category:
-			tsset temp_panID date_failtime
-			tsfill
+		* New obs (1 obs for checkin, 1 obs for checkout)
+		expand 2, gen(checkInOu) // 0 == original obs (check-in), 1 == new obs (check-out)
+		ge date_failtime = cond(checkInOu == 0, date_checkIn, date_checkOu)
 		
-			* inOuPat == 2
+		* Drop "check-out" obs for same day obs
+		drop if sameDay==1 & checkInOu == 1
+
+	* Create temp panels per in/outpatient exposures
 	
-	
-	
-	
-	
-	
-	
-	
-	
+		* Temp panel ID
+		egen temp_panID = group(uwid date_checkIn date_checkOu)
+		
+		* Fill in dates & carryforward details for each panel:
+		tsset temp_panID date_failtime
+		tsfill
+		bysort temp_panID (date_failtime): carryforward uwid days inOuPat date_check*, replace
+		
+	* Clean up overlapping entries 
+	duplicates tag uwid date_failtime, gen(dup)
+	drop if dup==1 & inOuPat==1 // if IP overlap with OP, give preference to IP
+	drop dup
+	duplicates tag uwid date_failtime, gen(dup)
+	duplicates drop uwid date_failtime, force // if IP overlap with IP, drop either one of the IP
+
+	* Drop unnecessary vars, save
+	keep uwid inOuPat date_failtime
+	save inOutPtTimes.dta
+
+
+
+
 	
 	
 	
