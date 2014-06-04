@@ -1,25 +1,6 @@
-* Create dates from failure times
+* Import, merge, clean, and prep raw inpatient/outpatient billing data
+* for use as time-varying "timevar_inOuPat" var in Cox model and sum stats
 
-	* Import Cdiff time-varying (long) data
-	cd /Users/nicole/FHCRC/cdiff/doFiles
-	do control_2007.do
-	do stcox_prep.do
-	
-	* Create dates for each failure time
-	ge date_failtime = floor((date_1stFHCRCtx-1) + _t)
-	
-	* Fill in all other dates
-	tsset upn date_failtime
-	tsfill
-	
-	*Carryforward uwids
-	bysort upn (uwid): carryforward uwid, replace
-	bysort upn (uwid): assert uwid[1]==uwid
-	
-	* Save dataset for merge with in/out data
-	cd ../data-dta
-	save timesAtRisk.dta, replace
-	
 
 * Outpatient data prep
 
@@ -129,21 +110,59 @@
 
 	* Drop unnecessary vars, save
 	keep uwid inOuPat date_failtime
-	save inOutPtTimes.dta
+	save inOutPtTimes.dta, replace
+	
+	*Create test dataset to ensure all uwid in Cdiff data are accounted for in billing data
+	keep uwid
+	duplicates drop
+	save uwidOnlyInOut.dta
+	clear
+	
+
+* Merge long Cdiff data (timesAtRisk.dta) with inOutPtTimes.dta, discard irrelevant times
+
+	* Import Cdiff stsplit (long) data, tsfill all at-risk dates
+	do /Users/nicole/FHCRC/cdiff/doFiles/datesAtRisk.do
+
+	* Establish that all Cdiff pts are accounted for in in/outpt billing data
+	cd ../data-dta
+	merge m:1 uwid using uwidOnlyInOut.dta, nogenerate
+	
+	* Merge with in/outpatient dates, discarding unneeded dates
+	merge 1:1 uwid date_failtime using inOutPtTimes.dta, keep(1 3) nogenerate
+
+
+* Create timevars for analysis
+
+	* Inpatient (1) vs. outpatient + nowhere (0)
+	ge timevar_In_v_OuNo = cond(inOuPat==2, 1, 0)
+	
+	* Dummy: Inpatient (2) vs. nowhere (0); outpatient (1) vs. nowhere (0)
+	ge timevar_dum_InOuNo = cond(inOuPat!=., inOuPat, 0)
+
+	* Dummy: Inpatient (2) vs. outpatient (0); nowhere (1) vs. outpatient (0)
+	ge timevar_dum_InNoOu = inOuPat
+	replace timevar_dum_InNoOu = 0 if inOuPat==1
+	replace timevar_dum_InNoOu = 1 if inOuPat==.
 
 
 
 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
