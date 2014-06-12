@@ -115,7 +115,7 @@
 	*Create test dataset to ensure all uwid in Cdiff data are accounted for in billing data
 	keep uwid
 	duplicates drop
-	save uwidOnlyInOut.dta
+	save uwidOnlyInOut.dta, replace
 	clear
 	
 
@@ -126,7 +126,7 @@
 
 	* Establish that all Cdiff pts are accounted for in in/outpt billing data
 	cd ../data-dta
-	merge m:1 uwid using uwidOnlyInOut.dta, nogenerate
+	//merge m:1 uwid using uwidOnlyInOut.dta, nogenerate
 	
 	* Merge with in/outpatient dates, discarding unneeded dates
 	merge 1:1 uwid date_failtime using inOutPtTimes.dta, keep(1 3) nogenerate
@@ -134,20 +134,47 @@
 
 * Create timevars for analysis
 
-	* Inpatient (1) vs. outpatient + nowhere (0)
-	ge timevar_In_v_OuNo = cond(inOuPat==2, 1, 0)
+	* Testing association between location of dx and CDI
+
+		* Inpatient (1) vs. outpatient + nowhere (0)
+		ge timevar_In_v_OuNo = cond(inOuPat==2, 1, 0)
+		
+		* Dummy: Inpatient (2) vs. nowhere (0); outpatient (1) vs. nowhere (0)
+		ge timevar_dum_InOuNo = cond(inOuPat!=., inOuPat, 0)
 	
-	* Dummy: Inpatient (2) vs. nowhere (0); outpatient (1) vs. nowhere (0)
-	ge timevar_dum_InOuNo = cond(inOuPat!=., inOuPat, 0)
-
-	* Dummy: Inpatient (2) vs. outpatient (0); nowhere (1) vs. outpatient (0)
-	ge timevar_dum_InNoOu = inOuPat
-	replace timevar_dum_InNoOu = 0 if inOuPat==1
-	replace timevar_dum_InNoOu = 1 if inOuPat==.
-
-
-
-
+		* Dummy: Inpatient (2) vs. outpatient (0); nowhere (1) vs. outpatient (0)
+		ge timevar_dum_InNoOu = inOuPat
+		replace timevar_dum_InNoOu = 0 if inOuPat==1
+		replace timevar_dum_InNoOu = 1 if inOuPat==.
+	
+	* Testing association between increased IP or OP exposure and CDI
+	
+		* Create running LOS run time vars "runTimeIP runTimeOP runTimeNO"
+		local runSuff "IP OP NO"
+		local num_inOu 2 1 .
+		local n : word count `num_inOu'
+		
+		forvalues i = 1/`n' {
+			local a : word `i' of `num_inOu'
+			local b : word `i' of `runSuff'
+			bysort uwid inOuPat (date_failtime): ge runTime`b' = _n if inOuPat == `a'
+			bysort uwid (date_failtime): carryforward runTime`b', replace
+			replace runTime`b' = 0 if runTime`b' == .
+		}
+		
+		
+	* Vars for testing association between CDI and location of acquisition
+	* (where acquisition exposure occurs days 1-3; CDI occurs day 4)
+		
+		* Where HAI = any (constant or intermittent) IP or OP during acquisition exposure period
+		bysort uwid (date_failtime): ge acqHospEver = 1 if inOuPat[_n-1] != . | inOuPat[_n-2] != . | inOuPat[_n-3] != .
+		
+		* Where HAI = any IP acquisition exposure period
+		bysort uwid (date_failtime): ge acqIPEver = cond(inOuPat[_n-1] == 2 | inOuPat[_n-2] == 2 | inOuPat[_n-3] == 2, 1, 0)
+		
+		bysort uwid (date_failtime): ge acqIPAlways = cond(inOuPat[_n-1] == 2 & inOuPat[_n-2] == 2 & inOuPat[_n-3] == 2, 1, 0)
+		* How many (among cases) were IP acquired: percent acquired IP vs. mixed or always not IP
+		
 
 
 
