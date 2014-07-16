@@ -30,6 +30,6 @@ between failure times do not affect estimates for a Cox regression model. Thus, 
 time-varying covariates, all you have to do is deﬁne the values of these time-varying covariates at all
 failure times at which a subject was at risk (Collett 2003, chap. 8). After splitting at failure times, you deﬁne time-varying covariates by referring to the system variable `_t` (analysis time) or the timevar variable used to `stset` the data.
 
->Collett, D. 2003. Chapter 8: Modelling Survival Data in Medical Research. 2nd ed. London: Chapman & Hall/CRC
+>_Collett, D. 2003. Modelling Survival Data in Medical Research. 2nd ed. London: Chapman & Hall/CRC_
 
 After `stsplit`ting the data on failure times, the time-dependent variables were filled into the new rows, thereby creating time-varying covariates.
