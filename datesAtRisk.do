@@ -15,3 +15,6 @@
 	*Carryforward uwids
 	bysort upn (uwid): carryforward uwid, replace
 	bysort upn (uwid): assert uwid[1]==uwid
+
+* Save
+save ../data-dta/datesAtRisk, replace
