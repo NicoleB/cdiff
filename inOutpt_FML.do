@@ -3,7 +3,7 @@
 
 cd ~/FHCRC/cdiff/data-dta/
 
-
+   
 
 * Outpatient data prep
 
@@ -242,25 +242,7 @@ cd ~/FHCRC/cdiff/data-dta/
 			egen patNumPed = group(upn) if hspname==1
 			egen patNumAd = group(upn) if hspname==0
 			
-			*Graph
-			   * Peds, all: inpatient, discharged, else
-				twoway (rspike date_startIn date_stopIn patNumPed, horizontal lcolor(gs0)) ///
-			   (rspike date_startOu date_stopOu patNumPed, horizontal lcolor(blue)) ///
-			   (rspike date_startDis date_stopDis patNumPed, horizontal lcolor(green)) ///
-			   (scatter patNumPed _t if failure!=., msymbol(x) mcolor(red))
-			   
-			   *Peds, all: inpatient, else
-				twoway (rspike date_startIn date_stopIn patNumPed, horizontal lcolor(gs0)) ///
-			   (rspike date_startOuAny date_stopOuAny patNumPed, horizontal lcolor(gs11)) ///
-			   (scatter patNumPed _t if failure!=., msymbol(x) mcolor(red))
-			   
-			   *Adults, all: inpatient, else
-			   twoway (rspike date_startIn date_stopIn patNumAd, horizontal lcolor(gs0)) ///
-			   (rspike date_startOu date_stopOu patNumAd, horizontal lcolor(gs11)) ///
-			   (scatter patNumAd _t if failure!=., msymbol(x) mcolor(red))
-		
-	
-	* Testing association between increased IP or OP exposure and CDI
+	* Vars testing association between increased IP or OP exposure and CDI
 	
 		* Create running LOS run time vars "runTimeIP runTimeOP runTimeNO"
 		local runSuff "IP OP NO"
@@ -289,11 +271,31 @@ cd ~/FHCRC/cdiff/data-dta/
 		
 		bysort uwid (date_failtime): ge acqIPAlways = cond(inOuPat[_n-1] == 2 & inOuPat[_n-2] == 2 & inOuPat[_n-3] == 2, 1, 0)
 		* How many (among cases) were IP acquired: percent acquired IP vs. mixed or always not IP
+			
+			
+			*Graph
+			/*
+			   * Peds, all: inpatient, discharged, else
+				twoway (rspike date_startIn date_stopIn patNumPed, horizontal lcolor(gs0)) ///
+			   (rspike date_startOu date_stopOu patNumPed, horizontal lcolor(blue)) ///
+			   (rspike date_startDis date_stopDis patNumPed, horizontal lcolor(green)) ///
+			   (scatter patNumPed _t if failure!=., msymbol(x) mcolor(red))
+			   
+			   *Peds, all: inpatient, else
+				twoway (rspike date_startIn date_stopIn patNumPed, horizontal lcolor(gs0)) ///
+			   (rspike date_startOuAny date_stopOuAny patNumPed, horizontal lcolor(gs11)) ///
+			   (scatter patNumPed _t if failure!=., msymbol(x) mcolor(red))
+			   
+			   *Adults, all: inpatient, else
+			   twoway (rspike date_startIn date_stopIn patNumAd, horizontal lcolor(gs0)) ///
+			   (rspike date_startOu date_stopOu patNumAd, horizontal lcolor(gs11)) ///
+			   (scatter patNumAd _t if failure!=., msymbol(x) mcolor(red))
+		*/
+	
+
 		
 
-
-
-
+save ~/FHCRC/cdiff/data-dta/inOutPt_total, replace
 
 
 
