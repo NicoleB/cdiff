@@ -39,19 +39,25 @@ stsplit, at(failure)
 	forval num=1/14  {
 		ge day_onRMD`num'=date_startRMD`num'-date_1stFHCRCtx
 		ge day_offRMD`num'=date_endRMD`num'-date_1stFHCRCtx
-		ge timevar_RMDacq`num'=cond(_t>=day_onRMD`num' & date_startRMD`num'!=. & ///
+		ge timevar_RMD`num'=cond(_t>=day_onRMD`num' & date_startRMD`num'!=. & ///
 		_t<=day_offRMD`num', 1, 0)
 	}
-	ge timevar_RMDacq=0
+	
+	*RMD timevar; no infection acquisition modeled
+	ge timevar_RMD=0
 	ge room_rmd=.
 	forval num=1/14 {
-		replace timevar_RMDacq=1 if timevar_RMDacq`num'==1 & timevar_RMDacq`num'!=0
-		replace room_rmd=room_rmd`num' if timevar_RMDacq`num'==1 & room_rmd`num'!=.
+		replace timevar_RMD=1 if timevar_RMD`num'==1 & timevar_RMD`num'!=0
+		replace room_rmd=room_rmd`num' if timevar_RMD`num'==1 & room_rmd`num'!=.
 		}
-	ge timevar_RMD100s=1 if room_rmd<=100 & timevar_RMDacq==1
-	replace timevar_RMD100s=0 if room_rmd>100 & timevar_RMDacq==1 & room_rmd!=.
+	
+	
+	ge timevar_RMD100s=1 if room_rmd<=100 & timevar_RMD==1
+	
+	replace timevar_RMD100s=0 if room_rmd>100 & timevar_RMD==1 & room_rmd!=.
 
-	drop room_rmd1-date_endRMD14 day_gvhd* day_gutgvhd* day_onRMD1-timevar_RMDacq14
+	drop day_gvhd* day_gutgvhd* 
+	* drop room_rmd1-date_endRMD14 day_onRMD1-timevar_RMD14
 	
 *Reset stset
 sort upn time
